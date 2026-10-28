@@ -777,6 +777,8 @@ def test_always_on_roundtrip_is_byte_faithful():
         (old_instruction, new_instruction),
         gen._QUERY_FIRST_EDIT,
         gen._GRAPH_DIFF_EDIT,
+        gen._QUERY_WORKFLOW_EDIT,
+        gen._QUERY_WORKFLOW_RULE_EDIT,
     )
     baseline_agents = gen._always_on_constants(gen.ALWAYS_ON_BASELINE_REF)["_AGENTS_MD_SECTION"]
     # The ONLY divergences from the frozen baseline are the sanctioned edits —
@@ -784,7 +786,10 @@ def test_always_on_roundtrip_is_byte_faithful():
     assert old_instruction in baseline_agents
     baseline_agents = baseline_agents.replace(*gen._QUERY_FIRST_EDIT)
     old_rule, new_rule = gen._GRAPH_DIFF_EDIT
-    assert baseline_agents.replace(old_instruction, new_instruction).replace(old_rule, new_rule) == rendered_agents
+    baseline_agents = baseline_agents.replace(old_instruction, new_instruction).replace(old_rule, new_rule)
+    for edit in (gen._QUERY_WORKFLOW_EDIT, gen._QUERY_WORKFLOW_RULE_EDIT):
+        baseline_agents = baseline_agents.replace(*edit)
+    assert baseline_agents == rendered_agents
     assert "`skill` tool" not in rendered_agents
     assert 'skill: "graphify"' not in rendered_agents
 

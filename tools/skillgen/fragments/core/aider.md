@@ -994,6 +994,8 @@ if not Path('graphify-out/graph.json').exists():
 ```
 If it fails, stop and tell the user to run `/graphify <path>` first.
 
+An exact node name or ID can be matched directly with the flow below. This single-file skill does not include the vocabulary and lessons steps (they are in `references/query.md` of the split skills); for a natural-language question, first map its words to the graph's own node labels and use those labels, not the question's wording, as the match terms.
+
 Load `graphify-out/graph.json`, then:
 
 1. Find the 1-3 nodes whose label best matches key terms in the question.
