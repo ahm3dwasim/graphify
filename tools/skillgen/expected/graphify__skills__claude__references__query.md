@@ -35,7 +35,7 @@ If it fails, stop and tell the user to run `/graphify <path>` first.
 
 ### Step 0 — Constrained query expansion (before traversal)
 
-graphify's `query` CLI matches nodes via case-folded substring + IDF — there is **no stemming, no synonyms, no cross-language match** inside the binary, and the inline fallback below matches the same way. If the user's question uses different language or different domain vocabulary than the graph's labels (user says "обработчик" / graph says "handler"; user says "authentication" / graph says "Guardian"), the literal matcher returns 0 hits and the answer collapses to noise.
+graphify's `query` CLI matches case-insensitively (lowercase) against node labels and some other node fields (source path, rationale text, attributes), ranked exact, then prefix, then substring, with IDF weighting — there is **no stemming, no synonyms, no cross-language match** inside the binary, and the inline fallback below matches the same way. If the user's question uses different language or different domain vocabulary than the graph's labels (user says "обработчик" / graph says "handler"; user says "authentication" / graph says "Guardian"), the literal matcher returns 0 hits and the answer collapses to noise.
 
 Fix this **without inventing tokens** by expanding the query against the actual graph vocabulary first:
 
@@ -76,7 +76,7 @@ If the list is empty, say so plainly and stop — do not proceed to traversal.
 
 ### Step 0b — Lessons
 
-At the start of graph work, run `graphify reflect --if-stale`, then read `graphify-out/reflections/LESSONS.md` (see "Work memory" below for what it holds). Lessons are applied manually: `graphify query` does not use them to choose or rank start nodes. Where a node has an entry in the lessons sidecar, `query`, `explain` and the MCP output only annotate that node's line with a display-only hint. Use the preferred sources as places to check first and skip known dead ends yourself.
+At the start of graph work, run `graphify reflect --if-stale`, then read `graphify-out/reflections/LESSONS.md` (see "Work memory" below for what it holds). Lessons are applied manually: `graphify query` does not use them to choose or rank start nodes. Where a node has an entry in the lessons sidecar, `graphify query`, the MCP `query_graph` tool (both print a subgraph, where the node line gets a `learning=<status>` suffix) and `graphify explain` (which adds a separate learning line) show a display-only hint. Other MCP tools, including `get_node`, do not show it. Use the preferred sources as places to check first and skip known dead ends yourself.
 
 ### Step 1 — Traversal
 
