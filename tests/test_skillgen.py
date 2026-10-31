@@ -1317,3 +1317,54 @@ def test_a_partly_read_file_is_cached_as_a_miss_so_the_next_update_retries_it(
     assert [Path(u).name for u in uncached] == ["short.md"], (
         f"the partly-read file must be re-dispatched, uncached={uncached}"
     )
+
+
+# --- sample query start-node selection: exact ID beats exact label (#3768) -----
+
+
+def _extract_selection_logic(fragment: str):
+    """Pull the exact-match + scoring block out of a fragment's sample flow and
+    return a callable (nodes, question) -> start_nodes that executes it verbatim."""
+    text = (REPO_ROOT / "tools/skillgen/fragments/core" / fragment).read_text(encoding="utf-8")
+    start = text.index("# Exact node ID or label match first")
+    end = text.index("if not start_nodes:", start)
+    block = text[start:end]
+
+    class _G:
+        def __init__(self, nodes):
+            self._nodes = nodes
+
+        def nodes(self, data=False):
+            return list(self._nodes.items()) if data else list(self._nodes)
+
+    def run(nodes, question):
+        ns = {"G": _G(nodes), "question": question}
+        ns["terms"] = [t.lower() for t in question.split() if len(t) > 3]
+        exec(block, ns)  # noqa: S102 - executing our own checked-in fragment
+        return ns["start_nodes"]
+
+    return run
+
+
+@pytest.mark.parametrize("fragment", ["aider.md", "devin.md"])
+def test_sample_query_selects_exact_id_over_label_collisions(fragment):
+    select = _extract_selection_logic(fragment)
+    # a, b, c share label "target" and precede the node whose ID is "target".
+    collision = {
+        "a": {"label": "target"},
+        "b": {"label": "target"},
+        "c": {"label": "target"},
+        "target": {"label": "something else"},
+    }
+    assert select(collision, "target") == ["target"]
+    # Short ID/name (<=3 chars): no length filter on the exact path.
+    short = {
+        "x1": {"label": "api"},
+        "x2": {"label": "api"},
+        "x3": {"label": "api"},
+        "api": {"label": "other"},
+    }
+    assert select(short, "api") == ["api"]
+    # Without an ID hit, exact labels come first, capped at three.
+    labels = {n: {"label": "target"} for n in "abcd"}
+    assert select(labels, "target") == ["a", "b", "c"]

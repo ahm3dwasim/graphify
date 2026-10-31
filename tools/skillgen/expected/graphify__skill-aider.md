@@ -1020,8 +1020,9 @@ terms = [t.lower() for t in question.split() if len(t) > 3]
 
 # Exact node ID or label match first (no length filter)
 q = question.strip().lower()
-exact = [nid for nid, ndata in G.nodes(data=True)
-         if q == str(nid).lower() or q == ndata.get('label', '').lower()]
+exact_id = [nid for nid in G.nodes() if q == str(nid).lower()]
+exact_label = [nid for nid, ndata in G.nodes(data=True)
+               if nid not in exact_id and q == ndata.get('label', '').lower()]
 
 # Find best-matching start nodes
 scored = []
@@ -1031,7 +1032,12 @@ for nid, ndata in G.nodes(data=True):
     if score > 0:
         scored.append((score, nid))
 scored.sort(reverse=True)
-start_nodes = exact[:3] or [nid for _, nid in scored[:3]]
+# An exact ID always wins (alone); then exact labels; then scored matches. Cap last.
+if exact_id:
+    start_nodes = exact_id[:3]
+else:
+    rest = [nid for _, nid in scored if nid not in exact_label]
+    start_nodes = (exact_label + rest)[:3]
 
 if not start_nodes:
     print('No matching nodes found for query terms:', terms)
