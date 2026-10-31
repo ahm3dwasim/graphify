@@ -994,7 +994,7 @@ if not Path('graphify-out/graph.json').exists():
 ```
 If it fails, stop and tell the user to run `/graphify <path>` first.
 
-An exact node name or ID can be matched directly with the flow below. This single-file skill does not include the vocabulary and lessons steps (they are in `references/query.md` of the split skills); for a natural-language question, first map its words to the graph's own node labels and use those labels, not the question's wording, as the match terms.
+Before a natural-language traversal, run `graphify reflect --if-stale` and read `graphify-out/reflections/LESSONS.md`, then use the graph's vocabulary (its own node labels, not the question's wording) as the match terms; the split skills describe these steps in `references/query.md`. An exact node name or ID may be queried directly: the flow below checks node IDs and labels for an exact match first, before scoring labels.
 
 Load `graphify-out/graph.json`, then:
 
@@ -1018,6 +1018,11 @@ question = 'QUESTION'
 mode = 'MODE'  # 'bfs' or 'dfs'
 terms = [t.lower() for t in question.split() if len(t) > 3]
 
+# Exact node ID or label match first (no length filter)
+q = question.strip().lower()
+exact = [nid for nid, ndata in G.nodes(data=True)
+         if q == str(nid).lower() or q == ndata.get('label', '').lower()]
+
 # Find best-matching start nodes
 scored = []
 for nid, ndata in G.nodes(data=True):
@@ -1026,7 +1031,7 @@ for nid, ndata in G.nodes(data=True):
     if score > 0:
         scored.append((score, nid))
 scored.sort(reverse=True)
-start_nodes = [nid for _, nid in scored[:3]]
+start_nodes = exact[:3] or [nid for _, nid in scored[:3]]
 
 if not start_nodes:
     print('No matching nodes found for query terms:', terms)

@@ -1389,16 +1389,28 @@ def _is_code_only_fast_path_fix_line(line: str) -> bool:
 
 
 def _is_query_workflow_note_line(line: str) -> bool:
-    """Whether a line is the aider/devin query-section note added for #3768.
+    """Whether a line is the aider/devin query-section change made for #3768.
 
     The monoliths ship no ``references/`` and so no vocabulary/lessons steps. The
-    note says an exact node name or ID can be matched directly and that a
-    natural-language question's words should first be mapped to the graph's own
-    node labels.
+    note tells the agent to run ``graphify reflect --if-stale``, read LESSONS.md
+    and use the graph's vocabulary before a natural-language traversal, and says
+    an exact node name or ID may be queried directly. The sample flow therefore
+    checks node IDs and labels for an exact match before scoring labels.
     """
-    return line.strip().startswith(
-        "An exact node name or ID can be matched directly with the flow below. "
-        "This single-file skill does not include the vocabulary and lessons steps"
+    s = line.strip()
+    return s in {
+        "# Exact node ID or label match first (no length filter)",
+        "q = question.strip().lower()",
+        "exact = [nid for nid, ndata in G.nodes(data=True)",
+        "if q == str(nid).lower() or q == ndata.get('label', '').lower()]",
+        "start_nodes = exact[:3] or [nid for _, nid in scored[:3]]",
+        "start_nodes = [nid for _, nid in scored[:3]]",
+    } or s.startswith(
+        (
+            "Before a natural-language traversal, run `graphify reflect --if-stale`",
+            "An exact node name or ID can be matched directly with the flow below. "
+            "This single-file skill does not include the vocabulary and lessons steps",
+        )
     )
 
 
